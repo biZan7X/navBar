@@ -1,6 +1,8 @@
 import react, { useEffect, useState } from "react";
+import { connect } from "react-redux";
+import { signIN, signOUT } from "../actions";
 
-const GoogleAuth = () => {
+const GoogleAuth = (props) => {
 	//^ component did mount
 	useEffect(() => {
 		window.gapi.load("client:auth2", () => {
@@ -12,20 +14,51 @@ const GoogleAuth = () => {
 				})
 				.then(() => {
 					const auth = window.gapi.auth2.getAuthInstance();
-					setIsSignedIn(auth.isSignedIn.get());
+					onAuthChange();
+					auth.isSignedIn.listen(onAuthChange);
 				});
 		});
 	}, []);
 
-	const [isSignedIn, setIsSignedIn] = useState(null);
+	const onAuthChange = () => {
+		const auth = window.gapi.auth2.getAuthInstance();
+		if (auth.isSignedIn.get()) props.signIN();
+		else props.signOUT();
+	};
+
+	const onSignInClick = () => {
+		const auth = window.gapi.auth2.getAuthInstance();
+		auth.signIn();
+	};
+
+	const onSignOutClick = () => {
+		const auth = window.gapi.auth2.getAuthInstance();
+		auth.signOut();
+	};
 
 	const renderAuth = () => {
-		if (isSignedIn === null) return <div>i dunno if we are signed in</div>;
-		else if (isSignedIn) return <div>we are signed in boss</div>;
-		else return <div>we are not signed in</div>;
+		if (props.isSignedIn === null) return null;
+		else if (props.isSignedIn)
+			return (
+				<div onClick={onSignOutClick} className="ui red google button">
+					<i className="google icon" />
+					Sign Out
+				</div>
+			);
+		else
+			return (
+				<div onClick={onSignInClick} className="ui green google button">
+					<i className="google icon" />
+					Sign In
+				</div>
+			);
 	};
 
 	return <div>{renderAuth()}</div>;
 };
 
-export default GoogleAuth;
+const mapStateToProp = (state) => {
+	return { isSignedIn: state.auth.isSignedIn }; //* we want the object of auth reducer
+};
+
+export default connect(mapStateToProp, { signIN, signOUT })(GoogleAuth);
